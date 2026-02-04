@@ -9,15 +9,6 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Include="src\**\*.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="README.md" />
-  </ItemGroup>
 
 </Project>

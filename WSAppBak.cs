@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Xml;
 
-namespace WSAppBak.Services
+namespace WSAppBak
 {
 	internal class WSAppBak
 	{
@@ -25,7 +25,7 @@ namespace WSAppBak.Services
 		
 		public WSAppBak()
 		{
-			ToolsDirectory = Path.Combine(AppCurrentDirectory, "tools");
+			ToolsDirectory = Path.Combine(AppCurrentDirectory, "WSAppBak");
 		}
 
 		public void Run()
