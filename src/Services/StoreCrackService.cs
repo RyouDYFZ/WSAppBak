@@ -3,27 +3,27 @@ using System.Diagnostics;
 using System.IO;
 using System.Xml;
 
-namespace WSAppBak.Services
+namespace StoreCrack.Services
 {
-	internal class WSAppBak
+	internal class StoreCrackService
 	{
 		private const string AppName = "Windows Store App Backup";
 		private const string AppCreator = "Kiran Murmu";
-		private const string WSAppXmlFile = "AppxManifest.xml";
+		private const string AppXmlFile = "AppxManifest.xml";
 		
 		private readonly string AppCurrentDirectory = Directory.GetCurrentDirectory();
 		private readonly string ToolsDirectory;
 		
 		private bool IsRunning = true;
-		private string WSAppName;
-		private string WSAppPath;
-		private string WSAppVersion;
-		private string WSAppFileName;
-		private string WSAppOutputPath;
-		private string WSAppProcessorArchitecture;
-		private string WSAppPublisher;
+		private string StoreAppName;
+		private string StoreAppPath;
+		private string StoreAppVersion;
+		private string StoreAppFileName;
+		private string StoreAppOutputPath;
+		private string StoreAppProcessorArchitecture;
+		private string StoreAppPublisher;
 		
-		public WSAppBak()
+		public StoreCrackService()
 		{
 			ToolsDirectory = Path.Combine(AppCurrentDirectory, "tools");
 		}
@@ -32,6 +32,14 @@ namespace WSAppBak.Services
 		{
 			try
 			{
+				// Check if running on Windows
+				if (!IsWindows())
+				{
+					DisplayError("This application only runs on Windows operating system.");
+					WaitForUserInput();
+					return;
+				}
+				
 				DisplayHeader();
 				ReadInput();
 			}
@@ -39,6 +47,100 @@ namespace WSAppBak.Services
 			{
 				DisplayError($"An unexpected error occurred: {ex.Message}");
 				WaitForUserInput();
+			}
+		}
+		
+		private bool IsWindows()
+		{
+			return Environment.OSVersion.Platform == PlatformID.Win32NT;
+		}
+		
+		/// <summary>
+		/// Runs the application in silent mode with provided parameters
+		/// </summary>
+		/// <param name="appPath">Path to the app directory</param>
+		/// <param name="outputPath">Output directory for the package</param>
+		/// <returns>Exit code: 0 for success, non-zero for failure</returns>
+		public int RunSilent(string appPath, string outputPath)
+		{
+			try
+			{
+				// Check if running on Windows
+				if (!IsWindows())
+				{
+					Console.WriteLine("Error: This application only runs on Windows operating system.");
+					return 1;
+				}
+				
+				// Check if required tools exist
+				if (!VerifyToolsExist())
+				{
+					return 2;
+				}
+				
+				// Set paths
+			StoreAppPath = appPath;
+			StoreAppOutputPath = outputPath;
+			StoreAppFileName = Path.GetFileName(StoreAppPath);
+			
+			// Validate paths
+			if (!ValidateAppPath(StoreAppPath))
+			{
+				Console.WriteLine($"Error: Invalid app path. {AppXmlFile} not found.");
+				return 3;
+			}
+			
+			if (!ValidateOutputPath(StoreAppOutputPath))
+			{
+				Console.WriteLine($"Error: Invalid output path. Directory not found.");
+				return 4;
+			}
+			
+			// Read app manifest
+			ReadAppManifest();
+				
+				// Process app package
+				if (CreateAppxPackage())
+				{
+					if (CreateCertificate())
+					{
+						if (ConvertCertificate())
+						{
+							// Sign app package and return success
+							SignAppPackageSilent();
+							return 0;
+						}
+						return 7;
+					}
+					return 6;
+				}
+				return 5;
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error: {ex.Message}");
+				return 99;
+			}
+		}
+		
+		private void SignAppPackageSilent()
+		{
+			string toolPath = Path.Combine(ToolsDirectory, "SignTool.exe");
+			string appxPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.appx");
+			string pfxPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.pfx");
+			string args = $"sign -fd SHA256 -a -f \"{pfxPath}\" \"{appxPath}\"";
+			
+			string result = RunProcess(toolPath, args);
+			
+			if (result.ToLower().Contains("successfully signed"))
+			{
+				Console.WriteLine("Package signing succeeded.");
+				Console.WriteLine("Important: Please install the '.cer' file to [Local Computer\\Trusted Root Certification Authorities]");
+				Console.WriteLine("before installing the App Package or use 'WSAppPkgIns.exe' file to install the App Package!");
+			}
+			else
+			{
+				Console.WriteLine("Failed to sign the package.");
 			}
 		}
 
@@ -54,10 +156,10 @@ namespace WSAppBak.Services
 			while (IsRunning)
 			{
 				DisplayHeader();
-				WSAppPath = GetValidPath("Enter the App path: ", ValidateAppPath);
-				WSAppOutputPath = GetValidPath("\nEnter the Output path: ", ValidateOutputPath);
+				StoreAppPath = GetValidPath("Enter the App path: ", ValidateAppPath);
+				StoreAppOutputPath = GetValidPath("\nEnter the Output path: ", ValidateOutputPath);
 				
-				WSAppFileName = Path.GetFileName(WSAppPath);
+				StoreAppFileName = Path.GetFileName(StoreAppPath);
 				ReadAppManifest();
 				
 				ProcessAppPackage();
@@ -90,7 +192,7 @@ namespace WSAppBak.Services
 
 		private bool ValidateAppPath(string path)
 		{
-			return File.Exists(Path.Combine(path, WSAppXmlFile));
+			return File.Exists(Path.Combine(path, AppXmlFile));
 		}
 
 		private bool ValidateOutputPath(string path)
@@ -102,17 +204,17 @@ namespace WSAppBak.Services
 		{
 			try
 			{
-				string manifestPath = Path.Combine(WSAppPath, WSAppXmlFile);
+				string manifestPath = Path.Combine(StoreAppPath, AppXmlFile);
 				using (XmlReader xmlReader = XmlReader.Create(manifestPath))
 				{
 					while (xmlReader.Read())
 					{
 						if (xmlReader.IsStartElement() && xmlReader.Name == "Identity")
 						{
-							WSAppName = xmlReader["Name"];
-							WSAppPublisher = xmlReader["Publisher"];
-							WSAppVersion = xmlReader["Version"];
-							WSAppProcessorArchitecture = xmlReader["ProcessorArchitecture"];
+							StoreAppName = xmlReader["Name"];
+							StoreAppPublisher = xmlReader["Publisher"];
+							StoreAppVersion = xmlReader["Version"];
+							StoreAppProcessorArchitecture = xmlReader["ProcessorArchitecture"];
 							break;
 						}
 					}
@@ -174,8 +276,8 @@ namespace WSAppBak.Services
 		private bool CreateAppxPackage()
 		{
 			string toolPath = Path.Combine(ToolsDirectory, "MakeAppx.exe");
-			string appxOutputPath = Path.Combine(WSAppOutputPath, $"{WSAppFileName}.appx");
-			string args = $"pack -d \"{WSAppPath}\" -p \"{appxOutputPath}\" -l";
+			string appxOutputPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.appx");
+			string args = $"pack -d \"{StoreAppPath}\" -p \"{appxOutputPath}\" -l";
 			
 			// Clean up existing file
 			if (File.Exists(appxOutputPath))
@@ -188,15 +290,18 @@ namespace WSAppBak.Services
 			
 			if (result.ToLower().Contains("succeeded"))
 			{
-				DisplayHeader();
 				Console.WriteLine($"Package '{Path.GetFileName(appxOutputPath)}' creation succeeded.");
 				return true;
 			}
 			else
 			{
 				DisplayError($"Package '{Path.GetFileName(appxOutputPath)}' creation failed.");
-				WaitForUserInput();
-				IsRunning = false;
+				// Only wait for input in interactive mode
+				if (IsRunning)
+				{
+					WaitForUserInput();
+					IsRunning = false;
+				}
 				return false;
 			}
 		}
@@ -204,9 +309,9 @@ namespace WSAppBak.Services
 		private bool CreateCertificate()
 		{
 			string toolPath = Path.Combine(ToolsDirectory, "MakeCert.exe");
-			string pvkPath = Path.Combine(WSAppOutputPath, $"{WSAppFileName}.pvk");
-			string cerPath = Path.Combine(WSAppOutputPath, $"{WSAppFileName}.cer");
-			string args = $"-n \"{WSAppPublisher}\" -r -a sha256 -len 2048 -cy end -h 0 -eku 1.3.6.1.5.5.7.3.3 -b 01/01/2000 -sv \"{pvkPath}\" \"{cerPath}\"";
+			string pvkPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.pvk");
+			string cerPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.cer");
+			string args = $"-n \"{StoreAppPublisher}\" -r -a sha256 -len 2048 -cy end -h 0 -eku 1.3.6.1.5.5.7.3.3 -b 01/01/2000 -sv \"{pvkPath}\" \"{cerPath}\"";
 			
 			// Clean up existing files
 			CleanupFile(pvkPath);
@@ -224,8 +329,12 @@ namespace WSAppBak.Services
 			else
 			{
 				DisplayError("Failed to create certificate for the package.");
-				WaitForUserInput();
-				IsRunning = false;
+				// Only wait for input in interactive mode
+				if (IsRunning)
+				{
+					WaitForUserInput();
+					IsRunning = false;
+				}
 				return false;
 			}
 		}
@@ -233,9 +342,9 @@ namespace WSAppBak.Services
 		private bool ConvertCertificate()
 		{
 			string toolPath = Path.Combine(ToolsDirectory, "Pvk2Pfx.exe");
-			string pvkPath = Path.Combine(WSAppOutputPath, $"{WSAppFileName}.pvk");
-			string cerPath = Path.Combine(WSAppOutputPath, $"{WSAppFileName}.cer");
-			string pfxPath = Path.Combine(WSAppOutputPath, $"{WSAppFileName}.pfx");
+			string pvkPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.pvk");
+			string cerPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.cer");
+			string pfxPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.pfx");
 			string args = $"-pvk \"{pvkPath}\" -spc \"{cerPath}\" -pfx \"{pfxPath}\"";
 			
 			// Clean up existing file
@@ -253,8 +362,12 @@ namespace WSAppBak.Services
 			else
 			{
 				DisplayError("Failed to convert certificate to sign the package.");
-				WaitForUserInput();
-				IsRunning = false;
+				// Only wait for input in interactive mode
+				if (IsRunning)
+				{
+					WaitForUserInput();
+					IsRunning = false;
+				}
 				return false;
 			}
 		}
@@ -262,8 +375,8 @@ namespace WSAppBak.Services
 		private void SignAppPackage()
 		{
 			string toolPath = Path.Combine(ToolsDirectory, "SignTool.exe");
-			string appxPath = Path.Combine(WSAppOutputPath, $"{WSAppFileName}.appx");
-			string pfxPath = Path.Combine(WSAppOutputPath, $"{WSAppFileName}.pfx");
+			string appxPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.appx");
+			string pfxPath = Path.Combine(StoreAppOutputPath, $"{StoreAppFileName}.pfx");
 			string args = $"sign -fd SHA256 -a -f \"{pfxPath}\" \"{appxPath}\"";
 			
 			Console.WriteLine("\n\nPlease wait.. Signing the package, this may take some minutes.\n");

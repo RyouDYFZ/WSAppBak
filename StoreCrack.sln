@@ -1,7 +1,7 @@
 
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WSAppBak", "WSAppBak.csproj", "{FC7B1B80-85F4-4053-A060-D2B8288CA19B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StoreCrack", "StoreCrack.csproj", "{FC7B1B80-85F4-4053-A060-D2B8288CA19B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

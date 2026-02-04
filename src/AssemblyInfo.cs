@@ -1,12 +1,12 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("WSAppBak")]
+[assembly: AssemblyTitle("StoreCrack")]
 [assembly: AssemblyDescription("Windows Store App Backup Tool")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("WSAppBak by Kiran Murmu")]
-[assembly: AssemblyCopyright("Copyright ©  2016 Kiran Murmu")]
+[assembly: AssemblyProduct("StoreCrack by DannyFeng")]
+[assembly: AssemblyCopyright("Copyright ©  2026 DannyFeng")]
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("f98280ba-6013-4592-8949-dc2ac99d60f3")]
